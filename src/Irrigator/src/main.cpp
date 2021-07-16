@@ -6,10 +6,10 @@
 #include <Arduino_JSON.h>
 
 // Pins definition
-#define PIN_RELAY_1 36
-#define PIN_RELAY_2 39
-#define PIN_RELAY_3 34
-#define PIN_RELAY_4 35
+#define PIN_ZONE_1 26
+#define PIN_ZONE_2 27
+#define PIN_ZONE_3 14
+#define PIN_ZONE_4 12
 #define PIN_RGBLED_R 32
 #define PIN_RGBLED_G 33
 #define PIN_RGBLED_B 25
@@ -51,8 +51,6 @@ JSONVar readings;
 // Timer variables (get sensor readings)
 unsigned long lastTime = 0;
 unsigned long timerDelay = 30000;
-
-//-----------------FUNCTIONS TO HANDLE SENSOR READINGS-----------------//
 
 // Return JSON String from sensor Readings
 String getJSONReadings()
@@ -162,15 +160,164 @@ void configurePins()
   pinMode(LED_BUILTIN, OUTPUT);
 
   // Relays pins
-  pinMode(PIN_RELAY_1, OUTPUT);
-  pinMode(PIN_RELAY_2, OUTPUT);
-  pinMode(PIN_RELAY_3, OUTPUT);
-  pinMode(PIN_RELAY_4, OUTPUT);
+  pinMode(PIN_ZONE_1, OUTPUT);
+  pinMode(PIN_ZONE_2, OUTPUT);
+  pinMode(PIN_ZONE_3, OUTPUT);
+  pinMode(PIN_ZONE_4, OUTPUT);
 
   //RGB LED pins
   pinMode(PIN_RGBLED_R, OUTPUT);
   pinMode(PIN_RGBLED_G, OUTPUT);
   pinMode(PIN_RGBLED_B, OUTPUT);
+}
+
+// Activates/Deavtivates each zone
+void toggleZone(uint8_t zoneId, bool status)
+{
+  Serial.printf("Setting zone:%d status:%d", zoneId, status);
+
+  switch (zoneId)
+  {
+  case 1:
+    digitalWrite(PIN_ZONE_1, status ? HIGH : LOW);
+    break;
+  case 2:
+    digitalWrite(PIN_ZONE_2, status ? HIGH : LOW);
+    break;
+  case 3:
+    digitalWrite(PIN_ZONE_3, status ? HIGH : LOW);
+    break;
+  case 4:
+    digitalWrite(PIN_ZONE_4, status ? HIGH : LOW);
+    break;
+  default:
+    Serial.printf("Unknown zoneId: %d", zoneId);
+    break;
+  }
+}
+
+// Handle the Web Server in Station Mode
+void configureServerSTA()
+{
+  // Route for root / web page
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+              Serial.println("GET /");
+              request->send(SPIFFS, "/index.html", "text/html");
+            });
+  server.serveStatic("/", SPIFFS, "/");
+
+  server.on("/toggleZone", HTTP_GET,
+            [](AsyncWebServerRequest *request)
+            {
+              int paramsNr = request->params();
+              Serial.println(paramsNr);
+
+              int zoneId = 0;
+              bool status = false;
+              Serial.print("Params:\r\n");
+              for (int i = 0; i < paramsNr; i++)
+              {
+                AsyncWebParameter *p = request->getParam(i);
+                Serial.printf("%s=%s\r\n", p->name().c_str(), p->value().c_str());
+                if (p->name() == "zoneId")
+                {
+                  zoneId = p->value().toInt();
+                }
+                if (p->name() == "status")
+                {
+                  status = (p->value() == "1" ? true : false);
+                }
+              }
+
+              if (zoneId == 0)
+              {
+                request->send(400, "text/plain", "Invalid zoneId");
+                return;
+              }
+
+              toggleZone(zoneId, status);
+              request->send(200, "text/plain", "message received");
+            });
+
+  events.onConnect([](AsyncEventSourceClient *client)
+                   {
+                     if (client->lastId())
+                     {
+                       Serial.printf("Client connected. Last message ID: %u\n", client->lastId());
+                     }
+                   });
+  server.addHandler(&events);
+
+  server.begin();
+}
+
+void configureServerAP()
+{
+  // Set Access Point
+  Serial.println("Setting AP (Access Point)");
+  // NULL sets an open Access Point
+  WiFi.softAP("ESP-WIFI-MANAGER", NULL);
+
+  IPAddress IP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(IP);
+
+  // Web Server Root URL For WiFi Manager Web Page
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+              Serial.println("WiFiMan: /");
+              request->send(SPIFFS, "/wifimanager.html", "text/html");
+            });
+
+  server.serveStatic("/", SPIFFS, "/");
+
+  // Get the parameters submited on the form
+  server.on("/", HTTP_POST, [](AsyncWebServerRequest *request)
+            {
+              Serial.println("POST: /");
+
+              int params = request->params();
+              for (int i = 0; i < params; i++)
+              {
+                AsyncWebParameter *p = request->getParam(i);
+                if (p->isPost())
+                {
+                  // HTTP POST ssid value
+                  if (p->name() == PARAM_INPUT_1)
+                  {
+                    ssid = p->value().c_str();
+                    Serial.print("SSID set to: ");
+                    Serial.println(ssid);
+                    // Write file to save value
+                    writeFile(SPIFFS, ssidPath, ssid.c_str());
+                  }
+                  // HTTP POST pass value
+                  if (p->name() == PARAM_INPUT_2)
+                  {
+                    pass = p->value().c_str();
+                    Serial.print("Password set to: ");
+                    Serial.println(pass);
+                    // Write file to save value
+                    writeFile(SPIFFS, passPath, pass.c_str());
+                  }
+                  // HTTP POST ip value
+                  if (p->name() == PARAM_INPUT_3)
+                  {
+                    ip = p->value().c_str();
+                    Serial.print("IP Address set to: ");
+                    Serial.println(ip);
+                    // Write file to save value
+                    writeFile(SPIFFS, ipPath, ip.c_str());
+                  }
+                }
+              }
+              request->send(200, "text/plain", "Done. ESP will restart, connect to your router and go to IP address: " + ip);
+              delay(3000);
+              // After saving the parameters, restart the ESP32
+              ESP.restart();
+            });
+  server.begin();
 }
 
 void setup()
@@ -198,35 +345,7 @@ void setup()
     digitalWrite(PIN_RGBLED_G, HIGH);
     digitalWrite(PIN_RGBLED_B, LOW);
 
-    // Handle the Web Server in Station Mode
-    // Route for root / web page
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-                Serial.println("GET /");
-                request->send(SPIFFS, "/index.html", "text/html");
-              });
-    server.serveStatic("/", SPIFFS, "/");
-
-    // Request for the latest sensor readings
-    server.on("/readings", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-                Serial.println("GET /readings");
-
-                String json = getJSONReadings();
-                request->send(200, "application/json", json);
-                json = String();
-              });
-
-    events.onConnect([](AsyncEventSourceClient *client)
-                     {
-                       if (client->lastId())
-                       {
-                         Serial.printf("Client connected. Last message ID: %u\n", client->lastId());
-                       }
-                     });
-    server.addHandler(&events);
-
-    server.begin();
+    configureServerSTA();
   }
   else
   {
@@ -235,71 +354,7 @@ void setup()
     digitalWrite(PIN_RGBLED_G, LOW);
     digitalWrite(PIN_RGBLED_B, LOW);
 
-    // Set Access Point
-    Serial.println("Setting AP (Access Point)");
-    // NULL sets an open Access Point
-    WiFi.softAP("ESP-WIFI-MANAGER", NULL);
-
-    IPAddress IP = WiFi.softAPIP();
-    Serial.print("AP IP address: ");
-    Serial.println(IP);
-
-    // Web Server Root URL For WiFi Manager Web Page
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-              {
-                Serial.println("WiFiMan: /");
-                request->send(SPIFFS, "/wifimanager.html", "text/html");
-              });
-
-    server.serveStatic("/", SPIFFS, "/");
-
-    // Get the parameters submited on the form
-    server.on("/", HTTP_POST, [](AsyncWebServerRequest *request)
-              {
-                Serial.println("POST: /");
-
-                int params = request->params();
-                for (int i = 0; i < params; i++)
-                {
-                  AsyncWebParameter *p = request->getParam(i);
-                  if (p->isPost())
-                  {
-                    // HTTP POST ssid value
-                    if (p->name() == PARAM_INPUT_1)
-                    {
-                      ssid = p->value().c_str();
-                      Serial.print("SSID set to: ");
-                      Serial.println(ssid);
-                      // Write file to save value
-                      writeFile(SPIFFS, ssidPath, ssid.c_str());
-                    }
-                    // HTTP POST pass value
-                    if (p->name() == PARAM_INPUT_2)
-                    {
-                      pass = p->value().c_str();
-                      Serial.print("Password set to: ");
-                      Serial.println(pass);
-                      // Write file to save value
-                      writeFile(SPIFFS, passPath, pass.c_str());
-                    }
-                    // HTTP POST ip value
-                    if (p->name() == PARAM_INPUT_3)
-                    {
-                      ip = p->value().c_str();
-                      Serial.print("IP Address set to: ");
-                      Serial.println(ip);
-                      // Write file to save value
-                      writeFile(SPIFFS, ipPath, ip.c_str());
-                    }
-                    //Serial.printf("POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
-                  }
-                }
-                request->send(200, "text/plain", "Done. ESP will restart, connect to your router and go to IP address: " + ip);
-                delay(3000);
-                // After saving the parameters, restart the ESP32
-                ESP.restart();
-              });
-    server.begin();
+    configureServerAP();
   }
 }
 

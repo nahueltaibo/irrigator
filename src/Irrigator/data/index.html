@@ -1,44 +1,69 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>ESP IOT DASHBOARD</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" type="image/png" href="favicon.png">
-      <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-    <link rel="stylesheet" type="text/css" href="style.css">
-  </head>
-  <body>
-    <div class="topnav">
-      <h1>ESP WEB SERVER SENSOR READINGS</h1>
-    </div>
-    <div class="content">
-      <div class="card-grid">
-        <div class="card">
-          <p class="card-title">BME280 Sensor Readings</p>
-          <p>
-            <table>
-              <tr>
-                <th>READING</th>
-                <th>VALUE</th>
-              </tr>
-              <tr>
-                <td>Temperature</td>
-                <td><span id="temp"></span> &deg;C</td>
-              </tr>
-              <tr>
-                <td>Humidity</td>
-                <td><span id="hum"></span> &percnt;</td>
-              </tr>
-              <tr>
-                <td>Pressure</td>
-                <td><span id="pres"></span> hPa</td>
-              </tr>
-            </table>
-          </p>
-          <p class="update-time">Last update: <span id="update-time"></span></p>  
+
+<head>
+  <title>NTIrrigator</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+    integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" type="image/png" href="favicon.png">
+</head>
+
+<body>
+  <div class="container-fluid">
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <a class="navbar-brand" href="#">NT Irrigator</a>
+    </nav>
+
+    <div class="row justify-content-center mt-3">
+      <div class="col-auto">
+        <div class="card" style="width: 300px;">
+          <div class="card-body">
+            <h5 class="card-title">Zone Control</h5>
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item">
+                <h6 class="card-subtitle mb-2 text-muted">Zone 1</h6>
+                <button type="button" onclick="toggleZone(1, false)" class="btn btn-primary">Disable</button>
+                <button type="button" onclick="toggleZone(1, true)" class="btn btn-primary">Enable</button>
+              </li>
+              <li class="list-group-item">
+                <h6 class="card-subtitle mb-2 text-muted">Zone 2</h6>
+                <button type="button" onclick="toggleZone(2, false)" class="btn btn-primary">Disable</button>
+                <button type="button" onclick="toggleZone(2, true)" class="btn btn-primary">Enable</button>
+              </li>
+              <li class="list-group-item">
+                <h6 class="card-subtitle mb-2 text-muted">Zone 3</h6>
+                <button type="button" onclick="toggleZone(3, false)" class="btn btn-primary">Disable</button>
+                <button type="button" onclick="toggleZone(3, true)" class="btn btn-primary">Enable</button>
+              </li>
+              <li class="list-group-item">
+                <h6 class="card-subtitle mb-2 text-muted">Zone 4</h6>
+                <button type="button" onclick="toggleZone(4, false)" class="btn btn-primary">Disable</button>
+                <button type="button" onclick="toggleZone(4, true)" class="btn btn-primary">Enable</button>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
-    <script src="script.js"></script>
-  </body>
+  </div>
+
+  <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+  <!-- <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+    integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+    crossorigin="anonymous"></script> -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+    integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+    integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+    crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"
+    integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+    crossorigin="anonymous"></script>
+  <script src="main.js"></script>
+</body>
+
 </html>
